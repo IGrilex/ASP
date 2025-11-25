@@ -1,0 +1,15 @@
+# --- data: keep folder, ignore contents ---
+data/*
+!data/.gitkeep
+
+# --- output: ignore MAP_ files anywhere ---
+output/**/MAP_*
+
+# ignore this specific folder entirely
+output/MAST3R/test_0/keyframes/
+
+# optional: other junk you may not want
+*.log
+*.tmp
+__pycache__/
+*.pyc
