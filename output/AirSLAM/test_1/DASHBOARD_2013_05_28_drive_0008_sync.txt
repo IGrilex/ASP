@@ -1,0 +1,47 @@
+=== KITTI-360 DASHBOARD (stereo) ===
+timestamp           : 2025-11-24T04:55:19
+sequence            : test_1
+test_index          : 1
+drive_name          : 2013_05_28_drive_0008_sync
+
+frames_dataset      : 1547
+frames_traj         : 601
+wall_time_sec       : 80.556
+avg_fps             : 19.204
+num_map_points      : N/A (no MAP_*.ply available)
+
+ATE (meters):
+  rmse              : 2.037726
+  mean              : 1.913141
+  median            : 1.882085
+  max               : 3.565830
+  frames_ate        : 601
+  scale             : 1.102123
+
+RPE (delta_t=0.50s) translational (m):
+  rmse              : 5.963622
+  mean              : 5.731963
+  median            : 5.780315
+RPE (delta_t=0.50s) rotational (deg):
+  rmse              : 7.317377
+  mean              : 4.127975
+  median            : 1.341002
+  pairs             : 596
+
+RPE (delta_t=2.00s) translational (m):
+  rmse              : 22.954115
+  mean              : 22.165447
+  median            : 23.964732
+RPE (delta_t=2.00s) rotational (deg):
+  rmse              : 24.026156
+  mean              : 13.666980
+  median            : 3.523510
+  pairs             : 593
+
+System usage (percent):
+  cpu_avg           : 19.7
+  cpu_max           : 100.0
+  ram_avg           : 29.1
+  ram_max           : 31.7
+  gpu_avg           : 36.4
+  gpu_max           : 64.0

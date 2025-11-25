@@ -5,6 +5,9 @@ data/*
 # --- output: ignore MAP_ files anywhere ---
 output/**/MAP_*
 
+# --- output: ignore AIR SLAM MAPS ---
+output/**/AirSLAM_mapv0*
+
 # ignore this specific folder entirely
 output/MAST3R/test_0/keyframes/
 

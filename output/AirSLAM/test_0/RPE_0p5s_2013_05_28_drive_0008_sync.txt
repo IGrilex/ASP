@@ -1,0 +1,10 @@
+RPE metrics (delta_t = 0.500 sec):
+Translational (meters):
+  RMSE   5.909337
+  Mean   5.687806
+  Median 5.886764
+Rotational (deg):
+  RMSE   10.051538
+  Mean   5.677862
+  Median 1.876575
+Pairs  337
