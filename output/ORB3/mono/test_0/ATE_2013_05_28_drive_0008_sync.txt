@@ -1,0 +1,7 @@
+ATE metrics (meters):
+RMSE   89.185830
+Mean   74.328005
+Median 68.762659
+Max    227.048808
+Frames 803
+Scale  22.744595

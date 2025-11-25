@@ -1,0 +1,47 @@
+=== KITTI-360 DASHBOARD ===
+timestamp           : 2025-11-25T13:48:23
+sequence            : test_3
+test_index          : 3
+drive_name          : 2013_05_28_drive_0002_sync
+
+frames_dataset      : 3012
+frames_traj         : 2994
+wall_time_sec       : 89.845
+avg_fps             : 33.524
+num_map_points      : 233040
+
+ATE (meters):
+  rmse              : 163.995986
+  mean              : 151.858339
+  median            : 145.899134
+  max               : 280.259193
+  frames_ate        : 2718
+  scale             : 7.147881
+
+RPE (delta_t=0.50s) translational (m):
+  rmse              : 4.616661
+  mean              : 4.435326
+  median            : 4.838420
+RPE (delta_t=0.50s) rotational (deg):
+  rmse              : 7.653802
+  mean              : 5.460863
+  median            : 3.336355
+  pairs             : 2700
+
+RPE (delta_t=2.00s) translational (m):
+  rmse              : 17.448148
+  mean              : 16.752649
+  median            : 18.274135
+RPE (delta_t=2.00s) rotational (deg):
+  rmse              : 27.097165
+  mean              : 19.187618
+  median            : 12.064914
+  pairs             : 2694
+
+System usage (percent):
+  cpu_avg           : 18.5
+  cpu_max           : 47.1
+  ram_avg           : 47.2
+  ram_max           : 50.2
+  gpu_avg           : 3.2
+  gpu_max           : 40.0
