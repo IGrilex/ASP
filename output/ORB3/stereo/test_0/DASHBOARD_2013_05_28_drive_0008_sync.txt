@@ -1,47 +1,47 @@
 === KITTI-360 DASHBOARD (stereo) ===
-timestamp           : 2025-11-24T22:51:36
+timestamp           : 2025-12-05T17:39:24
 sequence            : test_0
 test_index          : 0
 drive_name          : 2013_05_28_drive_0008_sync
 
 frames_dataset      : 933
 frames_traj         : 933
-wall_time_sec       : 52.554
-avg_fps             : 17.753
-num_map_points      : 268037
+wall_time_sec       : 51.969
+avg_fps             : 17.953
+num_map_points      : 270506
 
 ATE (meters):
-  rmse              : 1.228723
-  mean              : 1.144046
-  median            : 1.071040
-  max               : 2.393393
+  rmse              : 1.324628
+  mean              : 1.243003
+  median            : 1.139428
+  max               : 2.347577
   frames_ate        : 933
-  scale             : 1.071995
+  scale             : 0.977117
 
 RPE (delta_t=0.50s) translational (m):
-  rmse              : 5.816515
-  mean              : 5.601366
-  median            : 5.878884
+  rmse              : 6.093174
+  mean              : 5.868566
+  median            : 6.155302
 RPE (delta_t=0.50s) rotational (deg):
-  rmse              : 9.469529
-  mean              : 5.806428
-  median            : 2.113095
+  rmse              : 9.463746
+  mean              : 5.804208
+  median            : 2.125099
   pairs             : 930
 
 RPE (delta_t=2.00s) translational (m):
-  rmse              : 22.065348
-  mean              : 21.302030
-  median            : 21.996122
+  rmse              : 23.116482
+  mean              : 22.319075
+  median            : 23.058140
 RPE (delta_t=2.00s) rotational (deg):
-  rmse              : 33.356247
-  mean              : 20.075108
-  median            : 6.148039
+  rmse              : 33.329945
+  mean              : 20.069406
+  median            : 6.152865
   pairs             : 923
 
 System usage (percent):
-  cpu_avg           : 16.9
-  cpu_max           : 55.3
-  ram_avg           : 21.1
-  ram_max           : 22.2
-  gpu_avg           : 1.2
-  gpu_max           : 66.0
+  cpu_avg           : 17.0
+  cpu_max           : 58.1
+  ram_avg           : 25.9
+  ram_max           : 27.2
+  gpu_avg           : 0.0
+  gpu_max           : 2.0

@@ -1,0 +1,11 @@
+args:
+  bl: 0.594052
+  camera:
+    cx: 682.049453
+    cy: 238.769549
+    fx: 552.554261
+    fy: 552.554261
+  format: png
+  root: /workspace/ASP/data/data_2d_test_slam/test_0/2013_05_28_drive_0008_sync
+name: kitti360_test0
+type: GeneralStereo

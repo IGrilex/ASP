@@ -6,21 +6,20 @@ Generate GT vs predicted trajectory plots (top-down X/Y) for each algorithm
 and test sequence. Saves PNGs under output/graphs/<algorithm>/<seq>/.
 
 NEW:
-  - Multi-algorithm top-down path plots per sequence:
-      output/Graphs/ALL_ALGOS/<seq>/PATH_<drive>.png
   - Summary bar charts per sequence using DASHBOARD_<drive>.txt:
       - wall_time_sec (inference time)
       - avg_fps
       - ATE rmse
       - RPE 0.5s translational rmse
-      - CPU/GPU average usage
+      - RPE 2.0s translational rmse
+      - CPU/GPU/RAM average usage
 """
 
 from __future__ import annotations
 
 from pathlib import Path
 from typing import Optional, List, Tuple, Dict
-from dataclasses import dataclass  # ### NEW ###
+from dataclasses import dataclass
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -45,23 +44,53 @@ import metrics  # provides Trajectory, load_tum_trajectory, associate_by_time, a
 
 
 # Map algorithm labels -> candidate output root on disk
-ALG_DIRS = {
+# (was a static dict; now we keep known mappings and also auto-discover any subfolders
+#  under OUTPUT_ROOT so new outputs like "MAC_VO" are picked up automatically)
+KNOWN_ALG_DIRS = {
     "ORB3_mono": OUT_ORB3_MONO,
     "ORB3_stereo": OUT_ORB3_STEREO,
     "MAST3R": OUT_MAST3R,
     "AirSLAM": OUTPUT_ROOT / "AirSLAM",
 }
 
-# Optional colors for multi-algo plots  ### NEW ###
-ALG_PLOT_STYLES = {
-    "ORB3_mono": dict(label="ORB3 mono", linestyle="-", marker="o"),
-    "ORB3_stereo": dict(label="ORB3 stereo", linestyle="-", marker="x"),
-    "MAST3R": dict(label="MASt3R", linestyle="--", marker="."),
-    "AirSLAM": dict(label="AirSLAM", linestyle="-.", marker="^"),
-}
+
+def build_alg_dirs() -> Dict[str, Path]:
+    """
+    Build ALG_DIRS by merging KNOWN_ALG_DIRS with any directories found directly
+    under OUTPUT_ROOT. Known mappings take precedence, but discovered folders
+    (e.g. OUTPUT_ROOT / 'MAC_VO') are added automatically.
+    """
+    algs: Dict[str, Path] = {}
+
+    # Add known mappings first (keep them even if they don't exist; other code checks)
+    for name, path in KNOWN_ALG_DIRS.items():
+        algs[name] = path
+
+    # Discover additional algorithm folders under OUTPUT_ROOT and add them
+    if OUTPUT_ROOT.exists() and OUTPUT_ROOT.is_dir():
+        for p in sorted(OUTPUT_ROOT.iterdir()):
+            if not p.is_dir():
+                continue
+            name = p.name
+            # If this name is already in known mappings, prefer the known mapping but log the discovery
+            if name in algs:
+                if algs[name] != p:
+                    log(f"[DISCOVER] Found additional output dir for {name}: {p} (configured path={algs[name]})")
+                continue
+            algs[name] = p
+            log(f"[DISCOVER] Auto-registered algorithm '{name}' -> {p}")
+    else:
+        log(f"[DISCOVER] OUTPUT_ROOT does not exist or is not a directory: {OUTPUT_ROOT}")
+
+    return algs
+
+
+# Final ALG_DIRS used throughout the script
+ALG_DIRS = build_alg_dirs()
+
 
 # ============================================================
-# Dashboard parsing (for summary graphs)  ### NEW ###
+# Dashboard parsing (for summary graphs)
 # ============================================================
 
 @dataclass
@@ -81,7 +110,7 @@ class DashboardStats:
 
 def parse_dashboard(algo_name: str, seq_name: str, drive_name: str, path: Path) -> Optional[DashboardStats]:
     """
-    Parse a DASHBOARD_<drive>.txt in the format you showed in the question.
+    Parse a DASHBOARD_<drive>.txt in the expected format.
     We only extract what we need for plotting: wall_time, avg_fps, ATE rmse,
     RPE 0.5s/2.0s translational rmse, CPU/GPU/RAM averages.
     """
@@ -171,7 +200,7 @@ def collect_dashboard_stats_for_seq(seq_name: str) -> Dict[str, DashboardStats]:
     return stats_by_algo
 
 
-# Simple generic bar plotting helper  ### NEW ###
+# Simple generic bar plotting helper
 def _plot_bar_for_metric(
     stats_by_algo: Dict[str, DashboardStats],
     field: str,
@@ -211,15 +240,62 @@ def _plot_bar_for_metric(
         plt.close(fig)
 
 
+def _plot_bar_for_metric_logy(
+    stats_by_algo: Dict[str, DashboardStats],
+    field: str,
+    title: str,
+    ylabel: str,
+    out_path: Path,
+) -> None:
+    """
+    Same as _plot_bar_for_metric, but with logarithmic y-axis.
+    Useful for wall_time_sec when algorithms differ by orders of magnitude.
+    """
+    algos = []
+    vals = []
+    for algo, st in stats_by_algo.items():
+        v = getattr(st, field, None)
+        if v is None or v <= 0:
+            # log-scale can't handle non-positive values
+            continue
+        algos.append(algo)
+        vals.append(v)
+
+    if not algos:
+        log(f"[PLOT] No positive data for metric {field} at {out_path}")
+        return
+
+    fig, ax = plt.subplots(figsize=(6, 4))
+    x = np.arange(len(algos))
+    ax.bar(x, vals)
+    ax.set_xticks(x)
+    ax.set_xticklabels(algos, rotation=20)
+    ax.set_ylabel(ylabel)
+    ax.set_title(title)
+    ax.set_yscale("log")
+    ax.grid(axis="y", linestyle=":", alpha=0.5)
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        fig.savefig(str(out_path), dpi=200, bbox_inches="tight")
+        log(f"[OK] Saved summary log plot -> {out_path}")
+    except Exception as e:
+        log(f"[ERR] Failed to save summary log plot {out_path}: {e}")
+    finally:
+        plt.close(fig)
+
+
 def make_summary_plots_for_seq(seq_name: str) -> None:
     """
     Make per-sequence summary graphs for:
-      - wall_time_sec
+      - wall_time_sec (linear + optional log)
       - avg_fps
       - ate_rmse
       - rpe_0p5_trans_rmse
+      - rpe_2p0_trans_rmse
       - cpu_avg
       - gpu_avg
+      - ram_avg
     Saved under: OUTPUT_ROOT / "Graphs" / "Summary" / <seq_name>/
     """
     stats_by_algo = collect_dashboard_stats_for_seq(seq_name)
@@ -236,6 +312,15 @@ def make_summary_plots_for_seq(seq_name: str) -> None:
         title=f"Inference Time (wall time) - {seq_name} ({drive_name})",
         ylabel="Seconds",
         out_path=base_dir / f"WALL_TIME_{drive_name}.png",
+    )
+
+    # Optional log-scale wall time for large dynamic range
+    _plot_bar_for_metric_logy(
+        stats_by_algo,
+        field="wall_time_sec",
+        title=f"Inference Time (wall time, log scale) - {seq_name} ({drive_name})",
+        ylabel="Seconds (log scale)",
+        out_path=base_dir / f"WALL_TIME_LOG_{drive_name}.png",
     )
 
     _plot_bar_for_metric(
@@ -264,6 +349,14 @@ def make_summary_plots_for_seq(seq_name: str) -> None:
 
     _plot_bar_for_metric(
         stats_by_algo,
+        field="rpe_2p0_trans_rmse",
+        title=f"RPE 2.0s Translational RMSE - {seq_name} ({drive_name})",
+        ylabel="RPE 2.0s RMSE (m)",
+        out_path=base_dir / f"RPE_2p0_TRANS_{drive_name}.png",
+    )
+
+    _plot_bar_for_metric(
+        stats_by_algo,
         field="cpu_avg",
         title=f"CPU Usage (avg) - {seq_name} ({drive_name})",
         ylabel="CPU avg (%)",
@@ -278,10 +371,17 @@ def make_summary_plots_for_seq(seq_name: str) -> None:
         out_path=base_dir / f"GPU_AVG_{drive_name}.png",
     )
 
+    _plot_bar_for_metric(
+        stats_by_algo,
+        field="ram_avg",
+        title=f"RAM Usage (avg) - {seq_name} ({drive_name})",
+        ylabel="RAM avg (%)",
+        out_path=base_dir / f"RAM_AVG_{drive_name}.png",
+    )
+
 
 # ============================================================
 # Helpers: test frames & timestamps
-# (YOUR ORIGINAL CODE, unchanged)
 # ============================================================
 
 def get_test_image_paths(seq_name: str, drive_name: str) -> List[Path]:
@@ -386,7 +486,6 @@ def get_frameidx_to_time_rel(seq_name: str, drive_name: str) -> Dict[int, float]
 
 # ============================================================
 # GT loader: crop poses.txt using test frames + real timestamps
-# (YOUR ORIGINAL CODE, unchanged)
 # ============================================================
 
 def load_cropped_gt_for_seq(seq_name: str, drive_name: str) -> metrics.Trajectory:
@@ -467,7 +566,7 @@ def load_cropped_gt_for_seq(seq_name: str, drive_name: str) -> metrics.Trajector
 
 
 # ============================================================
-# Predicted trajectory loader (YOUR ORIGINAL CODE)
+# Predicted trajectory loader
 # ============================================================
 
 def find_pose_file(seq_out_dir: Path) -> Optional[Path]:
@@ -499,7 +598,7 @@ def load_predicted_traj(pose_path: Path) -> Optional[metrics.Trajectory]:
 
 
 # ============================================================
-# Alignment: time-based (like compute_ate) (YOUR ORIGINAL CODE)
+# Alignment: time-based (like compute_ate)
 # ============================================================
 
 def align_pred_to_gt_time_based(
@@ -553,7 +652,7 @@ def align_pred_to_gt_time_based(
 
 
 # ============================================================
-# Plotting (ORIGINAL single-algo + NEW multi-algo)
+# Plotting (single algorithm)
 # ============================================================
 
 def plot_topdown_xy(
@@ -652,74 +751,8 @@ def plot_topdown_xy(
     return fig
 
 
-# NEW: multi-algorithm top-down plot on the same axes  ### NEW ###
-def plot_topdown_xy_multi(
-    gt_xyz: np.ndarray,
-    algo_to_pred_xyz: Dict[str, np.ndarray],
-    title: str,
-) -> plt.Figure:
-    fig, ax = plt.subplots(figsize=(8, 8))
-
-    # GT path
-    if gt_xyz.size > 0:
-        ax.plot(
-            gt_xyz[:, 0],
-            gt_xyz[:, 1],
-            "-",
-            linewidth=1.5,
-            label="GT",
-        )
-
-    # Algorithms
-    for algo_name, pred_xyz in algo_to_pred_xyz.items():
-        if pred_xyz is None or pred_xyz.size == 0:
-            continue
-        style = ALG_PLOT_STYLES.get(algo_name, {})
-        label = style.get("label", algo_name)
-        linestyle = style.get("linestyle", "-")
-        marker = style.get("marker", None)
-        ax.plot(
-            pred_xyz[:, 0],
-            pred_xyz[:, 1],
-            linestyle=linestyle,
-            marker=marker,
-            markersize=2,
-            linewidth=1.0,
-            label=label,
-        )
-
-    ax.set_xlabel("X (m)")
-    ax.set_ylabel("Y (m)")
-    ax.set_title(title)
-    ax.legend(loc="best")
-    ax.grid(True)
-    ax.set_aspect("equal", adjustable="box")
-
-    # Autoscale
-    xs: List[float] = []
-    ys: List[float] = []
-    if gt_xyz.size > 0:
-        xs.extend(gt_xyz[:, 0].tolist())
-        ys.extend(gt_xyz[:, 1].tolist())
-    for _, pred_xyz in algo_to_pred_xyz.items():
-        if pred_xyz is not None and pred_xyz.size > 0:
-            xs.extend(pred_xyz[:, 0].tolist())
-            ys.extend(pred_xyz[:, 1].tolist())
-
-    if xs and ys:
-        minx, maxx = min(xs), max(xs)
-        miny, maxy = min(ys), max(ys)
-        dx = maxx - minx
-        dy = maxy - miny
-        pad = max(dx, dy) * 0.05 if max(dx, dy) > 0 else 1.0
-        ax.set_xlim(minx - pad, maxx + pad)
-        ax.set_ylim(miny - pad, maxy + pad)
-
-    return fig
-
-
 # ============================================================
-# Main processing (per-algo) – ORIGINAL
+# Main processing (per-algorithm)
 # ============================================================
 
 def process_algorithm(algo_name: str, root_dir: Path) -> None:
@@ -752,7 +785,6 @@ def process_algorithm(algo_name: str, root_dir: Path) -> None:
 
         # Load prediction
         pred_traj = load_predicted_traj(pose_file)
-
         if pred_traj is None:
             log(f"[WARN] Could not load predicted trajectory for {pose_file}, skipping.")
             continue
@@ -787,81 +819,17 @@ def process_algorithm(algo_name: str, root_dir: Path) -> None:
 
 
 # ============================================================
-# NEW: multi-algorithm path plots per sequence
-# ============================================================
-
-def make_multi_algo_path_plot_for_seq(seq_name: str) -> None:
-    """
-    For a given seq_name (e.g. test_0), load GT once and overlay all available
-    predicted trajectories (from all ALG_DIRS) on a single top-down plot.
-    """
-    drive_name = TEST_DRIVES.get(seq_name, None)
-    if drive_name is None:
-        log(f"[MULTI] Unknown seq_name {seq_name} for multi-algo plot.")
-        return
-
-    try:
-        gt_traj = load_cropped_gt_for_seq(seq_name, drive_name)
-    except Exception as e:
-        log(f"[MULTI][WARN] Failed to load GT for {seq_name}/{drive_name}: {e}")
-        return
-
-    gt_xyz = gt_traj.xyz
-    algo_to_pred_xyz: Dict[str, np.ndarray] = {}
-
-    for algo_name, root in ALG_DIRS.items():
-        seq_dir = root / seq_name
-        pose_file = find_pose_file(seq_dir)
-        if pose_file is None:
-            continue
-        pred_traj = load_predicted_traj(pose_file)
-        if pred_traj is None:
-            continue
-
-        _, pred_xyz_aligned, _, align_info = align_pred_to_gt_time_based(
-            gt_traj=gt_traj,
-            pred_traj=pred_traj,
-            with_scale=True,
-            max_dt=0.05,
-        )
-        log(f"[MULTI] {algo_name}/{seq_name}: aligned ({align_info})")
-        algo_to_pred_xyz[algo_name] = pred_xyz_aligned
-
-    if len(algo_to_pred_xyz) < 2:
-        log(f"[MULTI] Less than 2 algorithms available for {seq_name}, skipping multi plot.")
-        return
-
-    out_dir = OUTPUT_ROOT / "Graphs" / "ALL_ALGOS" / seq_name
-    out_dir.mkdir(parents=True, exist_ok=True)
-
-    title = f"All algorithms - {seq_name} ({drive_name})\nTime-based Sim(3) alignment"
-    fig = plot_topdown_xy_multi(gt_xyz, algo_to_pred_xyz, title)
-
-    out_png = out_dir / f"PATH_{drive_name}.png"
-    try:
-        fig.savefig(str(out_png), dpi=200, bbox_inches="tight")
-        log(f"[OK] Saved multi-algo path plot -> {out_png}")
-    except Exception as e:
-        log(f"[ERR] Failed to save multi-algo path plot {out_png}: {e}")
-    finally:
-        plt.close(fig)
-
-
-# ============================================================
 # Main
 # ============================================================
 
 def main() -> None:
     log("[START] Generating GT vs Predicted path plots (cropped GT, time-based alignment)...")
-    # 1) Per-algorithm path plots (your original behavior)
+
+    # 1) Per-algorithm path plots
     for algo_name, root in ALG_DIRS.items():
         process_algorithm(algo_name, root)
 
-    # 2) Multi-algorithm top-down plots per sequence  ### NEW ###
-    for seq_name in sorted(TEST_DRIVES.keys()):
-        make_multi_algo_path_plot_for_seq(seq_name)
-
-    # 3) Summary bar charts per sequence (inference time, FPS, ATE, RPE, CPU/GPU)  ### NEW ###
+    # 2) Summary bar charts per sequence (inference time, FPS, ATE, RPE, CPU/GPU/RAM)
     for seq_name in sorted(TEST_DRIVES.keys()):
         make_summary_plots_for_seq(seq_name)
 

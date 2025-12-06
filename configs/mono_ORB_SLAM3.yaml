@@ -1,0 +1,50 @@
+%YAML:1.0
+
+#--------------------------------------------------------------------------------------------
+# Camera Parameters. This is a monocular configuration.
+#--------------------------------------------------------------------------------------------
+Camera.type: "PinHole"
+
+# Camera calibration and distortion parameters (KITTI-360 0008)
+Camera.fx: 552.554261
+Camera.fy: 552.554261
+Camera.cx: 682.049453
+Camera.cy: 238.769549
+
+Camera.k1: 0.0
+Camera.k2: 0.0
+Camera.p1: 0.0
+Camera.p2: 0.0
+Camera.k3: 0.0
+
+Camera.width: 1408
+Camera.height: 376
+
+# For monocular, bf must be zero (no stereo baseline)
+Camera.bf: 0.0
+
+Camera.fps: 10.0
+Camera.RGB: 0 # 0 for Grayscale, 1 for RGB
+
+#--------------------------------------------------------------------------------------------
+# ORB Extractor Parameters
+#--------------------------------------------------------------------------------------------
+ORBextractor.nFeatures: 2000  # 2000-3000 is a good range. 4000 can be too slow.
+ORBextractor.scaleFactor: 1.2
+ORBextractor.nLevels: 8
+ORBextractor.iniThFAST: 20    # Default is 20
+ORBextractor.minThFAST: 7     # Default is 7
+
+#--------------------------------------------------------------------------------------------
+# Viewer Parameters (optional, but good to have)
+#--------------------------------------------------------------------------------------------
+Viewer.KeyFrameSize: 0.05
+Viewer.KeyFrameLineWidth: 1.0
+Viewer.GraphLineWidth: 0.9
+Viewer.PointSize: 2.0
+Viewer.CameraSize: 0.08
+Viewer.CameraLineWidth: 3.0
+Viewer.ViewpointX: 0.0
+Viewer.ViewpointY: -0.7
+Viewer.ViewpointZ: -1.8
+Viewer.ViewpointF: 500.0
