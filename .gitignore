@@ -11,6 +11,9 @@ output/**/AirSLAM_mapv0*
 # ignore this specific folder entirely
 output/MAST3R/test_0/keyframes/
 
+# ignore .docx files ONLY in the root folder
+/*.docx
+
 # optional: other junk you may not want
 *.log
 *.tmp
